@@ -432,12 +432,20 @@ fi
 
 "$BASE_PATH/update.sh" "$REPO_URL" "$REPO_BRANCH" "$BUILD_DIR" "$COMMIT_HASH"
 
+if fragment_in_list m2_wired "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
+    rm -f "$BASE_PATH/../$BUILD_DIR/package/base-files/files/etc/uci-defaults/992_set-wifi-uci.sh"
+fi
+
 apply_config
 print_config_fragment_summary
 remove_uhttpd_dependency
 
 cd "$BASE_PATH/../$BUILD_DIR"
 make defconfig
+
+if fragment_in_list m2_wired "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
+    python3 "$BASE_PATH/verify_m2_profile.py" --config .config
+fi
 
 # Kconfig 会静默移除不满足依赖的选项；启用 dae 时必须验证最终配置。
 if fragment_in_list dae "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
@@ -471,6 +479,10 @@ fi
 
 make download -j$(($(nproc) * 2))
 make -j$(($(nproc) + 1)) || make -j1 V=s
+
+if fragment_in_list m2_wired "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
+    python3 "$BASE_PATH/verify_m2_profile.py" --target-dir "$TARGET_DIR"
+fi
 
 # 检查设备固件清单，避免仅编出独立软件包却未装入目标镜像。
 if fragment_in_list dae "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then

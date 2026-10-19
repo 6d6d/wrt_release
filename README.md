@@ -111,7 +111,7 @@ GitHub Actions 的手动构建也提供 `add_fragments` 与 `remove_fragments` �
 
 默认片段由 `compilecfg/*.ini` 的 `CONFIG_FRAGMENTS` 指定：
 
-- 所有设备默认包含 `proxy`。
+- 除本 fork 的兆能 M2 纯有线配置外，其他设备默认包含 `proxy`。
 - IPQ60xx / IPQ807x 设备默认额外包含 `nss`。
 - 只有已显式选择 Dockerman 或明确适合运行 Docker 的设备默认包含 `docker_deps`，用于预置手动安装 Docker 所需的运行依赖，避免 NAND 空间紧张或无 USB 设备被默认加入 Docker 依赖。
 
@@ -142,12 +142,16 @@ https://github.com/kenzok8/small-package.git
 
 ## 9. 兆能 M2：预装插件与 dae
 
-本 fork 的 `zn_m2_immwrt` 与 `zn_m2_libwrt` 默认使用 `nss,proxy,dae` 配置片段。
-两个目标原有的显式 LuCI 插件选择相同：
+本 fork 的 `zn_m2_immwrt` 与 `zn_m2_libwrt` 默认使用 `nss,dae,m2_wired` 配置片段。
+两个目标采用纯有线配置，移除 MosDNS、Passwall、ath11k/mac80211/cfg80211 无线驱动、
+M2 无线固件、wpad 及无线 Mesh 支持，并移除自定义 Wi-Fi 初始化脚本。
+USB 3.0 显式选择 xHCI、DWC3/Qualcomm 控制器驱动，并加入 USB 存储 UAS 支持。
+固件不提供 Wi-Fi 连接或热点，需通过网线管理；USB 实际速率由硬件和外设决定。
+两个目标保留的显式 LuCI 插件选择相同：
 
 | 用途 | 插件 |
 | --- | --- |
-| 代理与 DNS | Passwall、MosDNS、SmartDNS、AdGuard Home（不内置 AdGuard Home 二进制） |
+| DNS | SmartDNS、AdGuard Home（不内置 AdGuard Home 二进制） |
 | 组网与端口转发 | EasyTier、Lucky、UPnP |
 | 流量管理 | OAF 应用过滤、PBR 策略路由、SQM（含 NSS 支持） |
 | 存储与共享 | DiskMan 磁盘管理、Samba4 文件共享 |
@@ -156,11 +160,13 @@ https://github.com/kenzok8/small-package.git
 额外加入 [kenzok8/openwrt-daede](https://github.com/kenzok8/openwrt-daede) 的
 `dae`、`daed` 和 `luci-app-daede`。LuCI「服务 → daede」可选择后端；保留上游
 默认的 daed 界面设置，也可切换至 dae。启用前需要自行配置订阅、节点和路由规则。
-透明代理应选择一个后端运行，避免与 Passwall 同时接管流量。
+透明代理应选择一个后端运行。
 
 `dae` 片段启用原生内核 BTF、cgroup BPF、BPF 事件和所需调度模块；Actions 安装
 主机 clang/LLVM 工具链。构建会在 `make defconfig` 后校验关键配置，并在编译后
-校验固件 manifest 中确实包含三个软件包。实际预装版本及依赖以固件 manifest 为准。
+校验固件 manifest 中确实包含三个软件包。`m2_wired` 还会校验 USB 3.0/UAS 驱动存在，
+并拒绝包含 MosDNS、Passwall 或无线驱动/固件的配置及固件清单。
+实际预装版本及依赖以固件 manifest 为准。
 本仓库提供编译配置；设备上的启动、转发及 NSS 加速兼容性仍需实机验证。
 
 云编译：进入 Actions → Build WRT → Run workflow，分别选择 `zn_m2_immwrt`
