@@ -140,7 +140,36 @@ https://github.com/kenzok8/small-package.git
 - `wrt_core/modules/`：模块化脚本，包括仓库准备、网络重试、feeds/custom_feed、源码修正、LuCI 修正、服务修正、验证、Docker、CUPS 等静态职责模块。
 - `wrt_core/patches/`：补丁、默认设置、Wi-Fi 初始化、NSS 诊断、PBR 规则和其他构建时注入文件。
 
-## 9. OAF（应用过滤）功能使用说明
+## 9. 兆能 M2：预装插件与 dae
+
+本 fork 的 `zn_m2_immwrt` 与 `zn_m2_libwrt` 默认使用 `nss,proxy,dae` 配置片段。
+两个目标原有的显式 LuCI 插件选择相同：
+
+| 用途 | 插件 |
+| --- | --- |
+| 代理与 DNS | Passwall、MosDNS、SmartDNS、AdGuard Home（不内置 AdGuard Home 二进制） |
+| 组网与端口转发 | EasyTier、Lucky、UPnP |
+| 流量管理 | OAF 应用过滤、PBR 策略路由、SQM（含 NSS 支持） |
+| 存储与共享 | DiskMan 磁盘管理、Samba4 文件共享 |
+| 系统工具 | iStoreX、TTYD 网页终端、自动重启、WOL 网络唤醒、vlmcsd |
+
+额外加入 [kenzok8/openwrt-daede](https://github.com/kenzok8/openwrt-daede) 的
+`dae`、`daed` 和 `luci-app-daede`。LuCI「服务 → daede」可选择后端；保留上游
+默认的 daed 界面设置，也可切换至 dae。启用前需要自行配置订阅、节点和路由规则。
+透明代理应选择一个后端运行，避免与 Passwall 同时接管流量。
+
+`dae` 片段启用原生内核 BTF、cgroup BPF、BPF 事件和所需调度模块；Actions 安装
+主机 clang/LLVM 工具链。构建会在 `make defconfig` 后校验关键配置，并在编译后
+校验固件 manifest 中确实包含三个软件包。实际预装版本及依赖以固件 manifest 为准。
+本仓库提供编译配置；设备上的启动、转发及 NSS 加速兼容性仍需实机验证。
+
+云编译：进入 Actions → Build WRT → Run workflow，分别选择 `zn_m2_immwrt`
+和 `zn_m2_libwrt`，其余输入留空。完成后下载运行记录中的固件 artifact。
+如使用 Release WRT，则发布到当前 fork 的 Releases。
+
+仅移除 dae 片段时，可在 Actions 的 `remove_fragments` 填 `dae`。
+
+## 10. OAF（应用过滤）功能使用说明
 
 使用 OAF（应用过滤）功能前，需先完成以下操作：
 

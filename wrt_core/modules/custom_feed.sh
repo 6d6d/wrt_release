@@ -171,7 +171,7 @@ install_custom_feed() {
         luci-app-quickstart luci-app-store luci-app-homeproxy luci-app-mosdns
         luci-app-passwall nikki luci-app-nikki mihomo-meta
         open-app-filter luci-app-oaf lucky luci-app-lucky luci-app-easytier
-        luci-app-emmc-health
+        luci-app-emmc-health dae daed luci-app-daede
     )
     local custom_feed_sources=()
     local missing_feed_dirs=()
@@ -195,6 +195,7 @@ install_custom_feed() {
         "sbwml/luci-app-mosdns|https://github.com/sbwml/luci-app-mosdns.git|v5|mosdns luci-app-mosdns"
         "Openwrt-Passwall/openwrt-passwall|https://github.com/Openwrt-Passwall/openwrt-passwall.git|main|luci-app-passwall"
         "nikkinikki-org/OpenWrt-nikki|https://github.com/nikkinikki-org/OpenWrt-nikki.git|main|nikki luci-app-nikki mihomo-meta"
+        "kenzok8/openwrt-daede|https://github.com/kenzok8/openwrt-daede.git|main|dae daed luci-app-daede"
     )
 
     feeds_path=$(get_feeds_path)
@@ -226,6 +227,11 @@ install_custom_feed() {
     if ! fix_emmc_health_luci_js_deps "$custom_feed_dir/luci-app-emmc-health"; then
         rm -rf "$custom_feed_dir"
         return 1
+    fi
+
+    # daede 直接调用 po2lmo；显式保证并行构建前已安装 LuCI 主机工具。
+    if ! grep -q '^PKG_BUILD_DEPENDS.*luci-base/host' "$custom_feed_dir/luci-app-daede/Makefile"; then
+        sed -i '/^PKG_NAME:=luci-app-daede$/a PKG_BUILD_DEPENDS+=luci-base/host' "$custom_feed_dir/luci-app-daede/Makefile"
     fi
 
     register_local_feed_source "$custom_feed_dir" "$feeds_path"

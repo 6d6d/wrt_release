@@ -439,6 +439,20 @@ remove_uhttpd_dependency
 cd "$BASE_PATH/../$BUILD_DIR"
 make defconfig
 
+# Kconfig 会静默移除不满足依赖的选项；启用 dae 时必须验证最终配置。
+if fragment_in_list dae "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
+    for option in PACKAGE_dae PACKAGE_daed PACKAGE_luci-app-daede \
+        KERNEL_DEBUG_INFO_BTF KERNEL_CGROUP_BPF KERNEL_BPF_EVENTS \
+        KERNEL_BPF_STREAM_PARSER KERNEL_XDP_SOCKETS \
+        PACKAGE_kmod-sched-bpf PACKAGE_kmod-veth \
+        DAE_USE_KERNEL_BTF DAED_USE_KERNEL_BTF; do
+        if ! grep -qx "CONFIG_${option}=y" .config; then
+            echo "Error: dae required option CONFIG_${option}=y is missing after make defconfig." >&2
+            exit 1
+        fi
+    done
+fi
+
 if grep -qE "^CONFIG_TARGET_x86_64=y" "$CONFIG_FILE"; then
     DISTFEEDS_PATH="$BASE_PATH/../$BUILD_DIR/package/emortal/default-settings/files/99-distfeeds.conf"
     if [ -d "${DISTFEEDS_PATH%/*}" ] && [ -f "$DISTFEEDS_PATH" ]; then
@@ -457,6 +471,23 @@ fi
 
 make download -j$(($(nproc) * 2))
 make -j$(($(nproc) + 1)) || make -j1 V=s
+
+# 检查设备固件清单，避免仅编出独立软件包却未装入目标镜像。
+if fragment_in_list dae "${EFFECTIVE_CONFIG_FRAGMENTS[@]}"; then
+    mapfile -t dae_manifests < <(find "$TARGET_DIR" -type f -name '*.manifest' ! -name Packages.manifest)
+    if [[ ${#dae_manifests[@]} -eq 0 ]]; then
+        echo "Error: no firmware manifests found for dae verification." >&2
+        exit 1
+    fi
+    for manifest in "${dae_manifests[@]}"; do
+        for package in dae daed luci-app-daede; do
+            if ! grep -q "^${package} - " "$manifest"; then
+                echo "Error: $package is missing from firmware manifest $manifest." >&2
+                exit 1
+            fi
+        done
+    done
+fi
 
 FIRMWARE_DIR="$BASE_PATH/../firmware"
 \rm -rf "$FIRMWARE_DIR"

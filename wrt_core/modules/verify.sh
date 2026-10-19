@@ -8,6 +8,7 @@ verify_custom_feed_installed_paths() {
     local required_package_dirs=(
         luci-app-adguardhome luci-app-mosdns v2ray-geodata luci-app-easytier
         luci-app-passwall nikki luci-app-nikki mihomo-meta luci-app-emmc-health
+        dae daed luci-app-daede
     )
     local missing_package_dirs=()
 
